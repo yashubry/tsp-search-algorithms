@@ -1,11 +1,11 @@
-from __future__ import annotations
-
 import argparse
 import time
 
-from src.utils import load_matrix, route_cost
+from src.utils import load_matrix, get_cost
 from src.greedy import nearest_neighbor, nearest_neighbor_2opt, rrnn
 
+#the purpose of this file is to make sure verything is working, and things can be run from the CL
+#this is also important for me to have for what i screen record the project 
 
 def time_one_call(fn, *args, cpu_repeat_if_zero: bool = True, **kwargs):
     t0 = time.time_ns()
@@ -49,7 +49,7 @@ def main():
             rrnn, mat, k=args.k, num_repeats=args.repeats, start=args.start, seed=args.seed
         )
 
-    cost = route_cost(route, mat)
+    cost = get_cost(route, mat)
 
     print(f"algo: {args.algo}")
     print(f"n: {mat.shape[0]}")
