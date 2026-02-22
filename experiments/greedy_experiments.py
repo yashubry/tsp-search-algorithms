@@ -210,12 +210,13 @@ def plot_rrnn_tuning(df_k, df_repeats):
         subset = df_k[df_k["size"] == size]
         plt.plot(subset["k"], subset["median_cost"],
                  marker="o", label=f"n={size}",
-                 color=plt.cm.RdPu(size / 35))  # gradient of pinks per size
+                 color=plt.cm.RdPu(size / 35))
     style_plot(
         title="RRNN: Effect of k on Solution Cost",
         xlabel="k (number of random choices)",
         ylabel="median cost"
     )
+    plt.xticks([1, 2, 3, 5, 7])  # actual k values we tested
     plt.savefig("experiments/plots/rrnn_k_tuning.png", dpi=150)
     plt.close()
     print("saved rrnn_k_tuning.png")
@@ -232,6 +233,7 @@ def plot_rrnn_tuning(df_k, df_repeats):
         xlabel="num_repeats",
         ylabel="median cost"
     )
+    plt.xticks([10, 25, 50, 100, 200])  # actual repeat values we tested
     plt.savefig("experiments/plots/rrnn_repeats_tuning.png", dpi=150)
     plt.close()
     print("saved rrnn_repeats_tuning.png")
