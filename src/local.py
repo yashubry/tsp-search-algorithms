@@ -9,9 +9,9 @@ from src.utils import return_to_start, get_cost
 def random_tour(n):
     #i need a random complete tour to start from for all three algorithms
     # i shuffle cities 1 through n-1 randomly and wrap with 0 at start and end
-    cities = list(range(1, n))       # cities 1 through n-1
-    np.random.shuffle(cities)        # shuffle them randomly
-    return [0] + cities + [0]        # wrap with 0 at start and end
+    inner_cities = list(range(1, n))       # cities 1 through n-1
+    np.random.shuffle(inner_cities)        # shuffle them randomly
+    return [0] + inner_cities + [0]        # wrap with 0 at start and end
 
 #okay ! now to start hill climbing! wookoo
 def hill_climbing(mat, num_restarts):
@@ -19,45 +19,43 @@ def hill_climbing(mat, num_restarts):
     #if a swap makes the tour cheaper i keep it, otherwise i throw it away
     # i do this num_restarts times and return the best tour i found overall
 
-    #uhh how do i do the restarts... um 
+    num_cities = mat.shape[0]
+    top_route = None
+    top_cost = float("inf")
+    history = []  # i'm tracking this for the iterations plot
 
-    n = mat.shape[0]
-    best_route = None
-    best_cost = float("inf")
-    cost_per_restart = []  # i'm tracking this for the iterations plot
-
-    for restart in range(num_restarts):
+    for attempt in range(num_restarts):
         # start from a new random tour each restart
-        route = random_tour(n)
-        current_cost = get_cost(route, mat)
+        curr_route = random_tour(num_cities)
+        curr_cost = get_cost(curr_route, mat)
 
         # keep swapping until no improvement is found
-        improved = True
-        while improved:
-            improved = False
+        got_better = True
+        while got_better:
+            got_better = False
             # try every pair of cities in the route (excluding the start/end city 0)
-            for i in range(1, n):
-                for j in range(i + 1, n):
+            for i in range(1, num_cities):
+                for j in range(i + 1, num_cities):
                     # swap cities at positions i and j
-                    new_route = route[:]
-                    new_route[i], new_route[j] = new_route[j], new_route[i]
-                    new_cost = get_cost(new_route, mat)
+                    candidate = curr_route[:]
+                    candidate[i], candidate[j] = candidate[j], candidate[i]
+                    candidate_cost = get_cost(candidate, mat)
 
                     # only keep the swap if it actually improves the cost
-                    if new_cost < current_cost:
-                        route = new_route
-                        current_cost = new_cost
-                        improved = True  # found an improvement so keep going
+                    if candidate_cost < curr_cost:
+                        curr_route = candidate
+                        curr_cost = candidate_cost
+                        got_better = True  # found an improvement so keep going
 
-        #track the best cost found at each restart for the plot
-        cost_per_restart.append(current_cost)
+        # track the best cost found at each restart for the plot
+        history.append(curr_cost)
 
-        #update overall best if this restart found something better
-        if current_cost < best_cost:
-            best_cost = current_cost
-            best_route = route
+        # update overall best if this restart found something better
+        if curr_cost < top_cost:
+            top_cost = curr_cost
+            top_route = curr_route
 
-    return best_route, cost_per_restart #yassssssss#slaayyyyyyy#wowowowoghgogodqpquhfinf13
+    return top_route, history #yassssssss#slaayyyyyyy#wowowowoghgogodqpquhfinf13
 
 #ok now im gonna go sim annealing i guess
 
@@ -69,42 +67,42 @@ def simulated_annealing(mat, alpha, initial_temp, max_iterations):
     # when temp is low i'm basically just doing hill climbing
     # this lets me explore more of the search space early on
 
-    n = mat.shape[0]
-    route = random_tour(n)
-    current_cost = get_cost(route, mat)
+    num_cities = mat.shape[0]
+    curr_route = random_tour(num_cities)
+    curr_cost = get_cost(curr_route, mat)
 
-    best_route = route[:]
-    best_cost = current_cost
+    top_route = curr_route[:]
+    top_cost = curr_cost
 
-    temp = initial_temp
-    cost_per_iteration = []  # tracking this for the iterations plot
+    heat = initial_temp  # yashu's name for temperature lol
+    history = []  # tracking this for the iterations plot
 
-    for iteration in range(max_iterations):
+    for step in range(max_iterations):
         # pick two random cities to swap (not city 0 since that's fixed)
-        i, j = np.random.choice(range(1, n), size=2, replace=False)
-        new_route = route[:]
-        new_route[i], new_route[j] = new_route[j], new_route[i]
-        new_cost = get_cost(new_route, mat)
+        idx1, idx2 = np.random.choice(range(1, num_cities), size=2, replace=False)
+        candidate = curr_route[:]
+        candidate[idx1], candidate[idx2] = candidate[idx2], candidate[idx1]
+        candidate_cost = get_cost(candidate, mat)
 
         # always accept if the new route is better
         # sometimes accept if its worse, based on temperature
-        diff = new_cost - current_cost
-        if diff < 0 or np.random.random() < np.exp(-diff / temp):
-            route = new_route
-            current_cost = new_cost
+        delta = candidate_cost - curr_cost
+        if delta < 0 or np.random.random() < np.exp(-delta / heat):
+            curr_route = candidate
+            curr_cost = candidate_cost
 
         # update best if i found something better
-        if current_cost < best_cost:
-            best_cost = current_cost
-            best_route = route[:]
+        if curr_cost < top_cost:
+            top_cost = curr_cost
+            top_route = curr_route[:]
 
-        # cool down the temperature by alpha each iteration
-        temp *= alpha
+        # cool down the temperature by alpha each step
+        heat *= alpha
 
-        # track best cost found so far at each iteration
-        cost_per_iteration.append(best_cost)
+        # track best cost found so far at each step
+        history.append(top_cost)
 
-    return best_route, cost_per_iteration
+    return top_route, history
 
 def genetic_algorithm(mat, mutation_chance, population_size, num_generations):
     #ok so the genetic algorithm is honestly the coolest one lol
@@ -112,75 +110,74 @@ def genetic_algorithm(mat, mutation_chance, population_size, num_generations):
     #to create new tours that hopefully inherit good traits from their parents
     #its basically survival of the fittest but for TSP haha
 
-    n = mat.shape[0]
+    num_cities = mat.shape[0]
 
     # step 1: create initial population of random tours
-    # just a bunch of random tours to start with
-    population = [random_tour(n) for _ in range(population_size)]
-    best_cost_per_generation = []  # gotta track this for the plot!!
+    pool = [random_tour(num_cities) for _ in range(population_size)]
+    gen_history = []  # gotta track this for the plot!!
 
-    def tour_cost(route):
+    def score(route):
         # helper to get the cost of a tour, i use this a lot lol
         return get_cost(route, mat)
 
-    def pmx_crossover(parent1, parent2):
+    def pmx_crossover(mom, dad):
         # partially mapped crossover (PMX) -- this is the hard part ngl
-        # i take a random slice from parent1 and fill the rest from parent2
-        # this makes sure every city appears exactly once in the child
+        # i take a random slice from mom and fill the rest from dad
+        # this makes sure every city appears exactly once in the kid
         # took me a while to get this right lol
-        size = n - 1  # excluding the start/end city 0
-        p1 = parent1[1:-1]  # strip the 0s at start and end
-        p2 = parent2[1:-1]
+        inner_size = num_cities - 1  # excluding the start/end city 0
+        mom_inner = mom[1:-1]  # strip the 0s at start and end
+        dad_inner = dad[1:-1]
 
         # pick two random crossover points
-        cx1, cx2 = sorted(np.random.choice(range(size), size=2, replace=False))
+        cut1, cut2 = sorted(np.random.choice(range(inner_size), size=2, replace=False))
 
-        # start child with the slice from parent1
-        child = [None] * size
-        child[cx1:cx2] = p1[cx1:cx2]
+        # start kid with the slice from mom
+        kid = [None] * inner_size
+        kid[cut1:cut2] = mom_inner[cut1:cut2]
 
-        # fill remaining positions with cities from parent2 in order
-        # skipping cities already in the child so i dont get duplicates
-        p2_remaining = [c for c in p2 if c not in child]
-        j = 0
-        for i in range(size):
-            if child[i] is None:
-                child[i] = p2_remaining[j]
-                j += 1
+        # fill remaining spots with cities from dad in order
+        # skipping cities already in the kid so i dont get duplicates
+        dad_leftovers = [c for c in dad_inner if c not in kid]
+        fill_idx = 0
+        for spot in range(inner_size):
+            if kid[spot] is None:
+                kid[spot] = dad_leftovers[fill_idx]
+                fill_idx += 1
 
-        return [0] + child + [0]
+        return [0] + kid + [0]
 
-    def mutate(route):
+    def maybe_mutate(route):
         # randomly swap two cities with mutation_chance probability
-        # this keeps the population diverse so i dont get stuck lol
+        # this keeps the pool diverse so i dont get stuck lol
         if np.random.random() < mutation_chance:
-            i, j = np.random.choice(range(1, n), size=2, replace=False)
-            route[i], route[j] = route[j], route[i]
+            idx1, idx2 = np.random.choice(range(1, num_cities), size=2, replace=False)
+            route[idx1], route[idx2] = route[idx2], route[idx1]
         return route
 
-    for generation in range(num_generations):
-        # sort population by cost -- best tours first obvs
-        population = sorted(population, key=tour_cost)
+    for gen in range(num_generations):
+        # sort pool by cost -- best tours first obvs
+        pool = sorted(pool, key=score)
 
         # track best cost this generation for the plot
-        best_cost_per_generation.append(tour_cost(population[0]))
+        gen_history.append(score(pool[0]))
 
-        # create children by crossing over pairs of parents
-        # i only use the top half of the population as parents (elitism)
+        # create kids by crossing over pairs of parents
+        # i only use the top half of the pool as parents (elitism)
         # the bottom half gets yeeted lol
-        children = []
-        while len(children) < population_size:
+        kids = []
+        while len(kids) < population_size:
             # pick two random parents from the top half
-            p1 = population[np.random.randint(0, population_size // 2)]
-            p2 = population[np.random.randint(0, population_size // 2)]
-            child = pmx_crossover(p1, p2)
-            child = mutate(child)
-            children.append(child)
+            mom = pool[np.random.randint(0, population_size // 2)]
+            dad = pool[np.random.randint(0, population_size // 2)]
+            kid = pmx_crossover(mom, dad)
+            kid = maybe_mutate(kid)
+            kids.append(kid)
 
-        # combine parents and children, keep the best population_size tours
+        # combine parents and kids, keep the best population_size tours
         # this is the elitism part -- survival of the fittest!!
-        population = sorted(population + children, key=tour_cost)[:population_size]
+        pool = sorted(pool + kids, key=score)[:population_size]
 
     # return the best tour found and the cost history
-    best_route = population[0]
-    return best_route, best_cost_per_generation
+    winner = pool[0]
+    return winner, gen_history

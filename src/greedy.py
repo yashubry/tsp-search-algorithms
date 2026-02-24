@@ -109,7 +109,7 @@ def two_opt(mat, route):
     return return_to_start(best_route)
 
 
-# NN + 2-opt (run NN first, then improve it with 2-opt)
+#NN + 2-opt (run NN first, then improve it with 2-opt)
 def nearest_neighbor_2opt(mat, start=0):
     route = nearest_neighbor(mat, start=start)
     route = two_opt(mat, route)
@@ -119,10 +119,10 @@ def nearest_neighbor_2opt(mat, start=0):
 
 # Repeated Random Nearest Neighbor (RRNN)
 # Idea:similar to NN, but instead of always picking the 1 closest city,
-# pick randomly from the k closest cities.
+#pick randomly from the k closest cities.
 # Repeat num_repeats times and keep the best route found.
 #
-# This uses randomness to explore different tours.
+#This uses randomness to explore different tours.
 
 def rrnn(mat, k=3, num_repeats=50, start=0, seed=0):
     # seed makes results reproducible (same random choices each run)
@@ -134,7 +134,7 @@ def rrnn(mat, k=3, num_repeats=50, start=0, seed=0):
     best_route = None
     best_cost = float("inf")
 
-    # repeat the randomized NN process a bunch of times
+    #repeat the randomized NN process a bunch of times
     for _ in range(num_repeats):
         unvisited = set(range(n))
         unvisited.remove(start)
@@ -143,11 +143,11 @@ def rrnn(mat, k=3, num_repeats=50, start=0, seed=0):
         cur = start
 
         while len(unvisited) > 0:
-            # sort unvisited cities by distance from cur
+            #sort unvisited cities by distance from cur
             ordered = sorted(unvisited, key=lambda j: mat[cur, j])
 
-            # choose randomly among the k closest
-            # if there are fewer than k cities left, just use all of them
+            #choose randomly among the k closest
+            #if there are fewer than k cities left, just use all of them
             choices = ordered[:k]
 
             nxt = random.choice(choices)
@@ -156,13 +156,13 @@ def rrnn(mat, k=3, num_repeats=50, start=0, seed=0):
             unvisited.remove(nxt)
             cur = nxt
 
-        # close the tour
+        #close the tour
         route = return_to_start(route)
 
-        # optional but usually helps: improve each candidate with 2-opt
+        #optional but usually helps: improve each candidate with 2-opt
         route = two_opt(mat, route)
 
-        # compare and keep the best
+        #compare and keep the best
         c = get_cost(route, mat)
         if c < best_cost:
             best_cost = c
