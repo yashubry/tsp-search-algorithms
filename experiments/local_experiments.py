@@ -202,7 +202,40 @@ def tune_genetic_algorithm(matrices):
     print("saved ga_tuning.csv woooo")
     return df
 
-def plot_tuning(df_hc, df_sa, df_ga):
+
+def tune_mutation_chance(matrices):
+    # ok so i also want to see how mutation chance affects the genetic algorithm
+    # i wasnt sure if it would matter much but turns out it does lol
+    # first i tried just 0.1 and 0.5 but i needed more values to see the trend
+    # mutation_values = [0.1, 0.5]
+    mutation_values = [0.01, 0.05, 0.1, 0.2, 0.5]
+    results = []
+
+    print("tuning mutation chance for genetic algorithm...")
+    for mutation_chance in mutation_values:
+        for size in SIZES:
+            costs = []
+            for mat in matrices[size]:
+                route, _ = genetic_algorithm(
+                    mat,
+                    mutation_chance=mutation_chance,
+                    population_size=50,
+                    num_generations=100)
+                costs.append(get_cost(route, mat))
+            results.append({
+                "mutation_chance": mutation_chance,
+                "size": size,
+                "median_cost": np.median(costs)
+            })
+            print(f"  mutation_chance={mutation_chance}, n={size} done!")
+
+    df = pd.DataFrame(results)
+    df.to_csv("experiments/ga_mutation_tuning.csv", index=False)
+    print("saved ga_mutation_tuning.csv!!")
+    return df
+
+
+def plot_tuning(df_hc, df_sa, df_ga, df_mutation):
     # ok now i gotta plot all the tuning results
     # one plot per algorithm showing how the hyperparameter affects cost
     os.makedirs("experiments/plots", exist_ok=True)
@@ -262,6 +295,25 @@ def plot_tuning(df_hc, df_sa, df_ga):
     plt.savefig("experiments/plots/ga_tuning.png", dpi=150)
     plt.close()
     print("saved ga_tuning.png!!")
+
+    # plot 4: genetic algorithm -- mutation_chance vs median cost
+    # i added this one later bc my friends had it and i realized i should too lol
+    plt.figure(figsize=(8, 5))
+    for size in SIZES:
+        subset = df_mutation[df_mutation["size"] == size]
+        plt.plot(subset["mutation_chance"], subset["median_cost"],
+                 marker="^", label=f"n={size}",
+                 color=plt.cm.Purples(size / 35))
+    style_plot_purple(
+        title="Genetic Algorithm: Effect of Mutation Chance on Solution Cost",
+        xlabel="mutation chance",
+        ylabel="median cost"
+    )
+    plt.xticks([0.01, 0.05, 0.1, 0.2, 0.5])
+    plt.savefig("experiments/plots/ga_mutation_tuning.png", dpi=150)
+    plt.close()
+    print("saved ga_mutation_tuning.png!!")
+
 
 def plot_cost_over_iterations(matrices, best_restarts=25, best_alpha=0.99, best_generations=100):
     # ok this is the fun part -- i get to see how each algorithm improves over time
@@ -457,7 +509,6 @@ def plot_normalized_local(df):
     print("saved local_normalized_runtime.png!!")
 
     # plot 2: normalized CPU time
-    # plot 2: normalized CPU time
     plt.figure(figsize=(8, 5))
     for algo in ["hill_climbing", "simulated_annealing", "genetic_algorithm"]:
         subset = df[df["algo"] == algo]
@@ -492,7 +543,8 @@ def plot_normalized_local(df):
     plt.savefig("experiments/plots/local_normalized_cost.png", dpi=150)
     plt.close()
     print("saved local_normalized_cost.png!!")
-    
+
+
 if __name__ == "__main__":
     print("loading matrices... here we go!!")
     matrices = load_matrices_by_size(MATRICES_DIR)
@@ -507,10 +559,11 @@ if __name__ == "__main__":
     df_hc = tune_hill_climbing(matrices)
     df_sa = tune_simulated_annealing(matrices)
     df_ga = tune_genetic_algorithm(matrices)
+    df_mutation = tune_mutation_chance(matrices)
 
     # step 2: plot the tuning results
     print("\nplotting tuning results...")
-    plot_tuning(df_hc, df_sa, df_ga)
+    plot_tuning(df_hc, df_sa, df_ga, df_mutation)
 
     # step 3: plot cost over iterations for each algorithm
     # i do this before the main experiments bc it only needs one matrix
